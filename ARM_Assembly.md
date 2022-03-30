@@ -164,7 +164,7 @@ cortex-M 계열에서는 ARM, Thu,b 명령어의 장점을 취한 Thumb2 명령�
 
 프로세스 코어에 위치하고 있고, 프로세서가 접근 가능한 가장 빠른 임시 기억장치로 ARM은 아래와 같은 3가지 종류의 레지스터가 존재합니다.
 
-
+https://computersource.tistory.com/72 ( 참고 )
 
 1. General Purpose Register : 프로그램 데이터 처리에 사용됩니다.
 2. Control Register : Stack Pointer, Link Register, Program Counter
@@ -218,9 +218,11 @@ ULCON0 레지스터의 경우 주소값이 정해져 있습니다. 0x50000000번
 
 (1) CPU와 메모리 사이의 데이터 통로
 
-(2) CPU : Bus Master, Memory : Bus Slave
+(2) CPU : Bus Master, Memory : Bus Slave 두 가지를 중재해주는 bus Arbiter가 존재
 
-(3) Bus : Address 버스와 Data 버스가 존재합니다.
+Slave가 Master에게 요청하는 것은 불가능. Master만 가능 
+
+(3) Bus : Address 버스(이동하고자 하는 데이터의 주소)와 Data 버스(실제 데이터가 이동)가 존재합니다.
 
 
 
@@ -356,6 +358,8 @@ C언어 -> 어셈블리어 -> 기계어 -> 같이 실행되어야 하는 파일�
 
 -> 링크 스크립트 파일과 *.o 파일의 구성을 알아야 합니다.
 
+링크 스크립트 파일 : 링커를 돌리기 위해 필요한 필수 파일 (https://embed-avr.tistory.com/86) 참고
+
 
 
 일반적인 C 파일이 있다고 한다면 해당 파일은 메모리 상에 3가지 영역으로 구분됩니다.
@@ -454,4 +458,137 @@ ARM based system
 
 ARM Core에 대한 블럭도는 아니고, ARM Core를 이용하여 구현한 CPU의 일종임 (UART와 GPIO 등 존재)
 
-6-2
+6-2 ARM Operating Modes
+
+(1) 7개의 Processor Mode가 존재합니다.
+
+![image-20220330085828460](ARM_Assembly.assets/image-20220330085828460.png)   
+
+User, FIQ, IRQ, Supervisor, Abort Mode, Undefined, System Mode
+
+Privileged modes : 특권 모드
+
+Unprivileged modes : 일반 모드
+
+Abort : 데이터 패치가 일어나거나 명령어 프리패치가 중단될 때
+
+FIQ IRQ : 인터럽트가 발생할 때
+
+UND : 정의되지 않은 명령어가 사용되었을 때
+
+ARM 프로세서에 전원이 인가 되면 SVC 모드에서 시작이 되고, 인터럽트, 익셉션 등이 발생하면 하드웨어적으로 실행모드가 변하거나, S/W적으로 SWI 명령어에 의해서 SVC 모드로 진입할 수도 있습니다. ARM Core에는 에 이렇게 여러가지 동작모드가 존재할까...
+
+-> 아키텍쳐 차원에서 소프트웨어의 보안 및 동작을 지원하기 위해서일 것! 가령 OS 설계시 커널 S/W는 모든 권한을 가지고 수행하도록 하고, User 어플리케이션은 제한된 권한을 가지고 수행을 하도록 설계한다면 어플리케이션 프로세서는 모든 권한이 없는 User Mode에서 동작시키고 나머지 커널 및 디바이스 드라이버들은 권한이 있는 나머지 모드에서 실행 시키도록 할 수 있습니다. 
+
+
+
+**[CPSR - Current Program Status Register]** -> SFR
+
+현재 status를 저장하는 register
+
+
+
+CPSR Register를 Privilege Mode에서 S/W로 변경 가능, User Mode에서 변경하면 Undefined instruction Exception이 발생합니다.
+
+
+
+ARM Core에 전원이 인가되면 최초에는 Supervisor 모드로 동작합니다. 처음에 권한이 없는 모드로 시작하면 Privilege Mode로 접근 불가!
+
+각 모드는 Stack영역과 Banked Register 영역을 가지고 있습니다.
+
+
+
+많은 모드가 있지만 언제 어떤 모드를 반드시 써야하는 규칙이 있는 것은 아니고 일반적인 권고 사항입니다. OS를 운영하지 않는 단순한 펌웨어 레벨의 코드들은
+
+초기 부팅시 설정된 Supervisor만 사용하는 경우도 많이 있습니다. 
+
+1. Privileged Mode는 IRO나 FIQ등의 인터럽트의 사용 가능 유무를 설정간으합니다.
+2. Privileged Mode는 자기들끼리 Mode 변경이 가능하지만, Normal Mode는 스스로 Privileged Mode로 Mode의 변경이 불가능 합니다.
+
+
+
+SYS -> FIQ, IRQ -> SVC, 가능
+
+USER -> Provileged Mode 불가능
+
+
+
+User Mode는 Application Program을 실행하는 Mode이고, System Mode는 Privileged Operating system task가 실행되는 mode이고,
+
+Supervisor mode는 커널에서 주로 사용되는  mode입니다. 
+
+
+
+### ARM Registers
+
+우선 결론 부터 : ARM core는 여러 가지 모드가 있고 mode마다 정해진 레지스터가 쓰인다
+
+일부 레지스터는 공유가 가능하고 각 모드마다 고유한 레지스터가 존재한다.
+
+
+
+Normal Registers 
+
+레지스터는 데이터를 임시로 보관하고, 연산에 사용되고, 프로그램 제어에 사용되는 접근속도가 가장 빠른 임시 기억장치라고 설명했습니다.
+
+
+
+ARM Core를 잘 이해하기 위해서는 ARM Core에 내장되어 있는 기본 Register들이 어떻게 구성되어 있고, 사용되는지를 알아야 합니다.
+
+Register들은 Core가 사용할 수 있는 저장 매체 중에서 가장 빠른 속도를 자랑하며, ARM의 동작은 모두 Register들을 어떻게 사용하느냐에 따라서 동작을 제어할 수 있습니다. 결국 ARM 프로세서를 사용한다는 것은 Register들을 가지고 연산을 하며 주 메모리와 메모리 매핑된 주변장치들을 제어하기 위해서 Load Store 하는 것 입니다.
+
+LOAD : 메모리에 있는 데이터를 레지스터에 저장시킬 때
+
+STORE : 레지스터에 있는 데이터를 메모리에 저장시킬 때
+
+
+
+![image-20220330092032166](ARM_Assembly.assets/image-20220330092032166.png) 
+
+
+
+위의 레지스터 그림을 보면 ARM 동작모드 별로 구분이 되어 있고, 동작 모드에 따라서 파란색 박스로 한번 더 구분이 되어 있는 것을 볼 수 있습니다.
+
+위에서 언급) 각 모드는 Banked Register와 스택영역이 존재한다고 함
+
+파란색 박스로 되어 있는 레지스터들을 뱅크드 레지스터라고 합니다. 흰색 박스의 레지스터는 동작모드에 상관없이 공통으로 사용되어 지고, 파란색 박스의 뱅크드 된 레지스터는 동작 모드 별로 독립적으로 사용 가능하다는 것입니다.
+
+
+
+결국 흰색부분은 공통적으로 공유가 가능하고 뱅크드 레지스터는 각 모드에서만 사용하게끔 설계가 되어 있다고 이해하면 됨!!!
+
+
+
+![image-20220330092451413](ARM_Assembly.assets/image-20220330092451413.png) 
+
+CPU에 최초 전원이 인가되어 SVC 모드로 동작을 하다가 FIQ 인터럽트가 발생했을 경우 레지스터의 상태!
+
+FIQ로 전환이 되면 R8 ~R14까지는 FIQ 전용 레지스터가 사용됩니다. 이 말은 FIQ모드에서 R8 ~ R14는 SVC 모드에서의 R8~ R 14와는 다른 레지스터 입니다. 
+
+즉 SVC 모드에서 FIQ가 발생되었을 때 Context 보존을 위해서 R8 ~ R14는 저장을 하지 않아도 FIQ모드에서 R8과 R14는 마음대로 사용해도 됩니다.
+
+CPSR 레지스터도 FIQ SVC 모드에서 각각 존재합니다.
+
+http://recipes.egloos.com/4986854 (참고)
+
+
+
+문맥이라는 용어에 대한 이해
+
+S/W 입장에서 생각해보면 프로그램이 순서대로 실행이 되다가, 어느 순간에 ISR이 발생을 하면 원래의 프로그램 실행을 잠시 중단하고 ISR 서비스 루틴으로 이동하게 됩니다. 이 때 ISR서비스 루틴으로 이동하는 것을 문맥의 전환이라고 합니다. 인터럽트가 발생시 -> 인터럽트를 처리하고 다시 돌아갈 지정을 위해서...
+
+
+
+ISR 서비스 루틴으로 이동하고 나서 ISR 서비스를 마치고 원래의 프로그램이 계속해서 실행이 되어야 하는데, 만약 ISR 서비스 루틴에서 특정 레지스터를 사용했다면 그 값들이 변동이 된 상태에서 원래 프로그램이 실행되던 위치로 돌아와서 실행을 하게 되므로 원치 않는 결과가 나올 수 있습니다. 이러한 이유 때문에 문맥의 보존을 위해서
+
+ISR 서비스 루틴으로 이동을 하기전에 ISR에서 사용될 레지스터들을 스택에 임시로 저장하고 ISR 루틴을 빠져나오기 직전에 스택에 저장되어 있던 레지스터 들을 다시 복원시켜 줍니다.
+
+인터럽트 발생 -> ISR-서비스 루틴 이동하여 사용할 레지스터 값들의 원본 값을 저장해둠  : 문맥의 전환
+
+인터럽트 종료 직전 -> ISR-서비스 루틴에 저장된 레지스터 원본 값을 복원시킴 : 문맥 복귀 
+
+ISR 서비스 루틴으로 이동하는 것을 문맥의 전환이라고 하고
+
+
+
+ISR 루틴에서 사용 할 레지스터들을 임시로 스택에 저장하였다가
