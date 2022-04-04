@@ -683,4 +683,370 @@ ARM core는 Opcode를 Memory에서 가져오자 마자 (Fetch) 이를 실행하�
 
 condition flag인 NZCV를 보고 바로 앞 opcode의 실행결과 보고 실행할지 말지를 결정합니다.
 
-IF : IRQ나 FIQ가 (인터럽트) 걸릴 수 있는지에 관련한 field입니다. 7번째 bit는 IRO, 6번째 bit는 FIQ가 걸릴 수 있는지에 관련한 field이다. 
+
+
+IF : IRQ나 FIQ가 (인터럽트) 걸릴 수 있는지에 관련한 field입니다.
+
+7번째 bit는 IRO, 6번째 bit는 FIQ가 걸릴 수 있는지에 관련한 field이다.  해당 비트를
+
+1로 처리하면 해당 모드 진행 중에 인터럽트가 Enable한지 Disable한지 정할 수 있습니다.
+
+
+
+5번째 T는 Thumb mode이냐 ARM mode이냐를 나타내는 field입니다. Thumb mode는 하위 16비트로 명령어를 지정할 수 있는 모드인데 나중에 자세하게 언급합니다!
+
+0 ~ 4의 5개의 비트는 현재 mode를 나타냅니다. -> 현재 모드가 SVC인지, UND인지 ABT 인지 등을 나타내며 
+
+register가 현재 CPU의 상태를 나타내는 아주 중요한 register입니다!
+
+
+
+결론 : CPSR의 값은 현재의 mode도 확인 가능한 register입니다.
+
+하위 5비트 (0~4)를 원하는 mode로 세팅하면 그 모드로 전환도 됩니다.
+
+System mode와 User mode는 이 CPSR의 mode bit만 차이가 나고  나머지가 동일하고 같이 사용합니다.
+
+
+
+이제 SPSR을 알아봅시다!
+
+Saved Program Status Register입니다.
+
+SPSR은 말 그대로 CPSR을 복사해서 넣는 특수 Register입니다. -> CPSR을 backup 할 때 써먹습니다.
+
+백업?!은 언제 진행이 되느냐 : SPSR에 CPSR의 값을 백업해놓고 mode를 바꾸게 되었을 때 SPSR의 값을 다시 CPSR에 집어 넣으면 이전 mode의 상태로 바로 복귀 가능합니다!!!!!!!
+
+그래서 CPSR은 하나면 충분하고 SPSR은 각 모드마다 하나씩 필요합니다.
+
+
+
+R14 (LR) : Linked Register : ARM은 어딘가로 branch (jump) 할 때 어디서 branch 해 왔는지 표시해줍니다.
+
+branch(jump)는 다른 위치로 이동하는 명령어라고 생각하면 됩니다. -> 그러면 해당 작업이 끝나면 다시 돌아가야 하는데... 돌아갈 위치를 기록해놔야지 돌아갈 수 있습니다! -> R14번에 돌아갈 위치를 기록해놓습니다.
+
+
+
+R13(Stack Pointer) : 현재 Stack을 어디까지 쌓아 두었는지 가르쳐 줍니다. 결국 해당 스택 포인터를 통해서 함수가 제대로 돌아갈 수 있게되는 것입니다.
+
+
+
+R15(PC) : 현재 어디를 수행하고 있는 건지 나타내주는 레지스터 입니다. 현재 수행하고 있는 위치는 단 하나이므로 1개만 존재합니다. 현재 명령어를 Fetch해온 위치를 가리키고 있습니다.
+
+메모 : 실행하는 위치가 아니라 -> 명령어를 가져온. 즉 Fetch를 해온 위치를 가르키는 거다 입니다.
+
+
+
+R0~R12까지는 CPU의 동작 중에 저장용도로 적절히 사용되는 것 입니다. 그래서 R0부터 R12까지는 그냥 레지스터라고 부르고, R13~R15. CPSR, SPSR은 특별한 용도가 있다고 해서, Special Purpose Register라고 까지합니다!
+
+
+
+Context Switching 스냅샷이라고도 표현한다.
+
+현재 레지스터의 상태(PC도 포함)를 그대로 저장해놓고 인터럽트가 발생했을 때 이동한다면 다시 복원을 할 수 있습니다.
+
+-> 스냅샷 데이터는 어디에 저장이 되는가!!!!!!!가 궁금
+
+
+
+왜 FIQ 는 banked register가 남들보다 많을까요?
+
+뱅크드 레지스터들을 많이 두는게 문맥교환이 일어날 확률도 적고, 공유 자원을 최대한 덜 전환하면 좋으니까
+
+전용 레지스터를 더 둔 것!!
+
+
+
+ARM Mode과 Register들을 알아보았으니, Mode에 진입하는 방법에 대해서 말씀드리겠습니다!!
+
+Privileged Mode는 자기 마음대로 mode를 바꿀 수 있지만, 
+
+그거 이외에 Hardware적으로 자동으로 특정 Mode에 진입할 수가 있습니다.
+
+-> 인터럽트가 발생하면 SVC Mode에서 인터럽트 모드로 들어가서 작업을 수행하는게 아니라 자동으로!!
+
+
+
+이렇게 자동으로 할 수 있는 매개체가 !!Exception입니다. 
+
+즉 Exception이라고 하는 것은 인터럽트를 포함한 더 큰 사건을 의미합니다. -> 외부 요청이라던가 오류에 관련된 것입니다. ( 인터럽트는 Exception에 한 종류!!!! )
+
+
+
+Exception이라는 사건을 통해서 Hardware적으로 정해진 특별한 reaction이 발생합니다.
+
+그 reaction이라는 것은 Exception이 발생하면 진행하던 동작을 멈추고, Exception의 종류에 해당하는 모드에 진입하고 그 Exception에 물려 있는 해당 주소로 pc를 jump 시킨 후 Exception에 대한 처리를 합니다.
+
+
+
+좀 더 자세하게 들어가면, 처음에 CPU를 실행할 때 리셋벡터로 0x0000주소로 메모리를 위치시키는데, 이것을  글로 표현하면 다음과 같습니다!
+
+SVC mode는 ARM에 전원을 인가하거나, reset을 시키면 SVC mode로 진입하면서, PC를 0x0으로 jump 시킵니다. 
+
+
+
+IRQ나 FIQ mode는 인터럽트가 발생하면, IRQ 혹은 FIQ mode로 진입하면서 PC를 0x1C 혹은 0x18로 jump시킵니다. 
+
+ABORT mode의 경우에도, data abort가 난 경우에는 0x10으로 Prefetch abort의 경우에는 0x0C로 hump를 하고 ABT mode로 진입합니다.
+
+UNDEF mode의 경우도 Undef execption이 났을 경우 UNDEF mode로 진입하면서 PC를 0x04로 jump 시킵니다.
+
+
+
+여기서 PC를 어딘가로 jump시킨다는 이야기는 PC값에 해당 메모리값으로 setting한다는 이야기이고, setting을 하면 거기서부터 Software를 실행한다고 보면 되겠습니다!!!!
+
+![image-20220401003936909](ARM_Assembly.assets/image-20220401003936909.png) 
+
+이러한 Exception이 일어났을 때 jump하는 Address들을 모아 Exception Vectior table이라고 부릅니다.
+
+-> 각 예외에 해당하는 메모리 주소는 정해져 있습니다! 무언가 예외상황이 발생하면 PC를 해당 Vector의 주소로 이동시켜서 모드를 설정합니다.
+
+
+
+다시 말해 Exception이 발생하면 그 Exception에 해당하는 미리 정해진 memory Address에 저장된 프로그램을 하드웨어적으로 수행하는데 이 address를 Exception Vector라고 하고, 각각의 Exception에 대해서 Exception Vector를 정의해 놓은 테이블을 Exception Vector Table이라고 합니다!!!!!
+
+
+
+여기서 재미있는 case는 user mode와 system mode로 진입하는 Exception은 없다는 것입니다. 
+
+예외가 발생해서 user mode로 이동하게 되면 ... 다른 예외가 나올 때까지 해당 모드에서 빠져나올 방법이 없기 때문..... ㅠㅠ
+
+
+
+Low vector와 High vector는 무엇일까 !!
+
+Low Vector는 말 그대로 Low Address에 Vector Table이 존재하는 방식이고, High Vector는 높은 주소에 Vector Table이 존재하는 방식으로서, 보통 MCP를 처음 디자인할 때 어떤 것을 쓸지 정해놓습니다.
+
+원래는 Low Vector를 사용하지만 최근에 NAND Flash에 Software를 넣어두고 실행 할 때 SDRAM에 NAND의 내용을 복사한 후 실행하는 방식이 늘어나다 보니, SDRAM을 init하기전에는 해당 부분을 사용할 수 없으므로,
+
+아주 작은 크기에 SRAM을 부트로더로 MCP 내부에 넣어두고 그 영역의 주소를 High Vector로 사용하는 경우가 생김!!
+
+![image-20220401005222148](ARM_Assembly.assets/image-20220401005222148.png) 
+
+그림으로 표현되었는데 참 귀엽네요. -> user mode는 왕따...
+
+
+
+자 이제 각각의 Exception들은 어떨 때 발생하는지 생각해봅시다!!!!!
+
+1. SVC mode : Power on이나 reset이 일어난 경우 SVC mode에 진입합니다
+2. IRQ mode : Hardware적인 인터럽트가 발생하여 ARM에 Core에 알려주면 IRQ mode로 진입합니다.
+3. FIQ mode : Fast interrupt가 발생하면 진입합니다.
+4. ABT mode : Abort mode는 접근하려고 하는 메모리 주소가 접근 할 수 없는 주소이거나 명령어 패치가 실패한 경우 진입됩니다. Access Protection이 걸려 있는 주소를 함부로 접근하려고 했을 때도 발생합니다.
+5. UND mode : Undefined mode는 Instruction을 해석했는데 ARM이 모르는 것일 경우에 진입하게 되며, 보통 memory Corruption이 났을 때, 발생합니다만, 이걸 응용하게 되면, ARM이 사용하지 않는 코드를 일부러 삽입해서 해당 부분에서 멈추게 하여 디버깅을 하는 등 의도된 일을 할 수 있습니다.
+
+
+
+ARM을 다루는데 있어서 가장 기초적인 내용이므로 !!! 열심히 외우기
+
+![image-20220404153614846](ARM_Assembly.assets/image-20220404153614846.png) 
+
+해당 표를 유심히 보기!!
+
+
+
+CPSR의 Hex값과  Mode를 매칭해서 외우면 엄청 편리함.
+
+
+
+Exception에도 우선순위가 존재함
+
+한꺼번에 Exception이 발생했을 때 어느 것이 처리되느냐가 문제입니다.
+
+
+
+우선순위는 System이 맛탱이? 가게하는 순 중요도... ㅎㅎ 순서로 순위를 매깁니다.
+
+1등은 Reset : 가장 강합니다.
+
+2등은 Data Abort : Data를 못 읽어오면 소용이 없음
+
+3등은 FIQ 이고 4등은 IRQ
+
+5위는 Prefetch Abort입니다. -> Prefetch Abort는 Pipe line중 가장 처음인 fetch단계에서
+
+발생하니까 굳이 순위를 높여 놓지 않아도 항상 먼저 발생합니다.
+
+6위는 Undefined instruction입니다. -> 명령어 해석을 못하는 경우
+
+7위는 SWI : SWI는 프로그래머가 일부러 의도적으로 발생시키는 것이므로 굳이
+
+예외 순위가 높지 않아도 됩니다.
+
+
+
+소프트웨어 실행중 Exception이 발생하면 어떤 일이 벌어지느냐
+
+고려해야 하는 것들은
+
+1. Exception  mode가 발생 한 후 이전 mode로 돌아갈 수 있어야 합니다.
+2. 문맥 교환이 잘 이뤄져야 합니다. -> 전에 쓰던 레지스터들 원상복구
+3. 이전 모드로 돌아갔을 때 중지한 부분에서 다시 실행할 수 있어야 합니다.
+4. 자동으로 Exception Vector로 점프
+
+
+
+이러한 것을 만족하기 위해서는
+
+1. CPSR을 저장해야합니다. -> CPSR에는 현재 모드와 현재 상태가 저장되어 있습니다. (레지스터)
+2. Context를 Stack에 저장하면 좋습니다. Banked Register를 제외한 나머지 register들은 R0부터 R12까지는 
+
+스택에 저장해야 합니다.
+
+	3. 익셉션이 발생하기 전 현재 수행하고 있는 주소를 저장합니다.
+	3. 점프
+
+
+
+예시) SVC mode에서 동작하던 중 IRQ가 발생했다고 가정한다. Exception이 발생하면 CPSR의 mode를 IRQ로 변경하면서 IRQ mode의 Banked Register인 R13_irq, R14_irq, SPSR_irq로 현재 context가 변경됩니다.
+
+순서
+
+1. CPSR을 SRSR_irq에 복사합니다.
+2. CPSR의 mode를 IRQ로 변경합니다. 결과적으로 stack pointer도 IRQ mode의 stack pointer로 변경합니다.
+3. IRQ disable 함, ARM mode로 변경 -> Thumb 모드라고 할 지라도 익셉션 벡터는 항상 ARM 모드임
+
+​	즉  32비트로 처리하는 ARM mode로 프로그래밍을 해줘야함 그리고 추가적으로 더이상 인터럽트가 불가능하	게 만들어줍니다.
+
+	4. R14_irq = 현재 PC입니다.
+	4. IRQ Exception Vector 주소인 0x12로 가야하니까 PC =0x12로 변경
+
+-> 하드웨적으로 자동으로 처리됨
+
+
+
+소프트웨어적으로 이제 처리해야함
+
+-x12에 있는 IRQ handler에서 처리할 것들.
+
+1. R0부터 R12까지 (뱅크드레지스터가 아닌 공유 레지스터들)를 R13_irq가 가르키는 stack에 저장합니다.
+2. 돌아갈 주소를 보정합니다. R14_irq(LR) = PC  (-> 돌아갈 PC 값을 R14에 저장해줌)를 넣었으니까, 처음 인터럽트 걸린 순간에는 pipe line에 의해서 2개 opcode가 이미 진행되었으니까  -> 보정 처리를 해줘야 함 -> 다시 해당 명령어를 실행하기 위해서!!! 
+3. 이제 예외처리가 다 끝나게 되면 이전에 저장했던 값들을 다시 불러오고 원상복귀 시킵니다.
+
+
+
+원상복귀 과정
+
+	1. CPSR : = SPSR_irq에 넣었던 -> 이전 mode SVC로 돌아가기
+	1. R13(SP)를 통해 Stack에 넣어놨던 레지스터 값들을 다시 불러오기
+	1. PC는 R14에 저장된 값을 넣어주기 ! 
+
+-> 원상복귀 완료!!
+
+
+
+ARM mode와 THUMB mode :
+
+Thumb mode는 ARM mode의 반쪽 버전이라고 볼 수도 있습니다.
+
+ARM은 32bit RISC machine이고, 32bit로 동작하는게 최상의 Performance를 제공할 수 있습니다.
+
+machine 마다 word size가 다른 건 그런 의미입니다. word란 CPU가 한번에 처리할 수 있는 크기를 말합니다.
+
+
+
+처음 32 bit ARM을 만들어 냈을 때 16bit data line을 가진 Memory가 시대의 주인공이였습니다.
+
+32bit Core를 만들었지만 결국 16bit로 압축한 명령어 set을 발표하는게 그게 Thumb mode입니다..
+
+---
+
+
+
+### ARM / Thumb PCS - 레지스터 사용법
+
+
+
+ARM 내부의 Register에 관해서 이야기를 많이 했는데 Register에 관해서 얘기 할 때 PC라든지, 
+
+LR이라든지 하는 특수 용법의 Register들이 은근슬쩍 나왔습니다. 이러한 특수 용법을 가진 레지스터 외의
+
+레지스터들도 쓰이는 쓰임새가 존재합니다. -> 이러한 약속을 APCS라고 합니다.
+
+이런 약속을 APCS 즉 ARM Procedure Call Standard라고 부릅니다. -> 이 스텐다드에 맞춰서 Compiler는
+
+기계어를 만들어 냅니다.
+
+
+
+이러한 레지스터들의 약속은 어떤 것들이냐!!
+
+1. 함수를 부를 때 Register는 어떻게 사용해야 하는가!
+2. return 값은 어떻게 돌려주는가
+3. Stack은 어떨 때, 어떻게 사용되는가?
+4. 1)~3)에서 사용된 레지스터 이외의 레지스터들은 어떻게 사용되는가
+
+-> 이러한 말들을 AAPCS 등... 으로 부릅니다. -> 계속 변경됨
+
+
+
+AAPCS에 따른 각 레지스터의 사용법!
+
+![image-20220404211239151](ARM_Assembly.assets/image-20220404211239151.png) 
+
+R0부터 R15까지 다 나와있으며 특별 레지스터들은 표현이 되어 있습니다!!
+
+Synonym는 R0 부터 R11까지 레지스터들을 다른 이름으로 부를 수도 있다~ 라는 것입니다.
+
+Special이라고 부르는 것은 이름이 존재하는 것 입니다.
+
+이 중에서 가장 많이 사용하는것은 R0, R1, R2, R3, SP, LR, PC 정도 입니다.
+
+
+
+![image-20220404214741815](ARM_Assembly.assets/image-20220404214741815.png) 
+
+r0 부터 r4까지는 매개변수로 사용되고, 5개부터는 스택에 저장됩니다.
+
+함수 내부에서 r5부터 r11까지는 변수로써 활용됩니다. -> 8개까지 사용가능 그 이상부터는 스택에 저장됨
+
+0~11까지 총 12개 사용했고, 나머지 12 13 14 15는 특수 레지스터로 활용됩니다.
+
+R12는 넘어가고 R13(SP)은 Stack을 사용하기 위한 Stack pointer입니다.
+
+R14 (LR)는 점프시에 사용됨 -> 이전 PC값을 저장
+
+R15 (PC)는 현재 실행하고 있는 주소 PC값이 저장되는 곳 입니다.
+
+ 
+
+### ARM이 인터럽트임을 어떻게 아는가!
+
+
+
+ARM은 인터럽트가 걸리면 어떻게 행동하는가가 Exception 처리 중 한가지이며, IRQ나 FIQ Handler에 가기까지가 MCU가 어떻게 행동하는가에 대한 대답입니다. 인터럽트가 걸리면 실행주소가 Exception Vector 중에서
+
+IRQ나 FIQ Vector로 강제로 바뀌어 지며, 그 Vector에는 실제 Handler로 연결하기 위한 코드가 들어있습니다.
+
+인터럽트는 결국 여러가지 종류가 있을 테니 각각에 따른 응답이 다르게 될 것이고 이 것을 
+
+interrupt Service Routine이라고 부릅니다. 약자로는 ISR이라고 부릅니다.
+
+
+
+사실 전자 System에서 interrupt의 정체는 : 전기신호입니다.
+
+![image-20220404215636431](ARM_Assembly.assets/image-20220404215636431.png) 
+
+MCU안에는 interrupt Controller라는 IP가 하나 달려있고, 외부에 나와 있는 pin이나, 내부에 있는 IP와 interrupt Controller사이에 control bus가 달려있어서 그 선을 통해서 신호를 주면 interrupt Controller가 알아차리게 됩니다. ( CPU의 모드를 IRQ mode로 바꿔줍니다. )
+
+
+
+인터럽트를 처리할 때 인터럽트를 더이상 받지 못하게 설정하는 경우 ( 위에서 언급했던 ) 말고도
+
+몇 번까지는 가능하게끔 하는 시스템도 존재합니다. -> 이러한 경우 계속해서 밀리게 되면 결국
+
+처음에 걸린 인터럽트는 계속해서 밀리게 됩니다.
+
+-> 이때 Nesting이라는 것을 사용합니다. 시스템에 따라서 천차만별인데 몇 번까지 Nesting을 처리하겠다 등의
+
+시스템도 존재합니다.
+
+
+
+인터럽트도 바로 실행되는게 아니라 현재 상황에 방해가 되는 경우가 존재합니다.  이럴 경우를 대비해서 일단 중요한 용건은 처리하고 ISR 루틴을 끝난 뒤에 DPC, APC Bottom Half 등의 용어로 부릅니다. -> RTOS 쪽에서 더 자세히 살펴봅니다.
+
+
+
+### Soc의 IP의 Bus 통신
+
