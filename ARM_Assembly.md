@@ -1050,3 +1050,47 @@ MCU안에는 interrupt Controller라는 IP가 하나 달려있고, 외부에 나
 
 ### Soc의 IP의 Bus 통신
 
+Chip 내부에 IP만 늘어 놓으면 되는 것이 아니라 연결을 해줘야 한다.
+
+
+
+연결해주는 방법은 Bus를 이용하는 방법입니다. - Bus도 여러가지 디바이스가 공유하는 전선이니까
+
+이 Bus를 어떻게 연결하고 어떻게 통신할지 결정해놓은 것이 AMBA입니다.
+
+
+
+ARM사가 최적의 성능을 낼 수 있는 규격은 ARm에서 주도하는 규격입니다.
+
+Bus의 통신방식을 이해할 수 있고 지켜줄 수 있는 것은 Bus Interface입니다.
+
+
+
+Bus위에 Data를 어떻게 전송할거냐 어떻게 받을 거냐를 컨트롤 해주는 인터페이스입니다.
+
+
+
+AMBA라고 하는 규격은 3가지 종류가 존재합니다. AHB, ASB, APB입니다.
+
+AHB : Advanced high performance Bus이고, ASB는 Advanced System Bus이며, APB는 Advanced Peripheral Bus입니다.
+
+
+
+AMBA는 이렇듯 3가지 규약(프로토콜)을 정해놓았습니다.  -> 버스는 전선이라고 생각하면 편함( 각각에 연결된 전선이 다르다 라는 느낌!)
+
+
+
+![image-20220405233412311](ARM_Assembly.assets/image-20220405233412311.png) 
+
+AHB는 이름이 high performance니까, Burst Mode(강력 출력)의 데이터 전송에 사용되고, APB는 주변장치들(크게 빠르게 데이터의 전송이 필요없음)에 연결되어 있습니다.
+
+
+
+Bridge는 AHB와 APB의 속도가 다르니까 이 것을 변환해주는 변환기 처럼 생각하면 됩니다
+
+왜 전체적은 구분을 저렇게 나눴을까!! (구역을 AHB와 APB로 구분지어서)
+
+
+
+AHB와 APB는 각각 속도가 다르니까 AHB가 APB에 요청하면 너무 느려져서 끼리끼리 놀라고 해놓은 것입니다.
+
